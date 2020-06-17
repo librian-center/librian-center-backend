@@ -1,0 +1,6 @@
+azure-functions
+azure-storage-common
+azure-storage-blob
+azure-cosmosdb-table
+numpy
+opencv-python
