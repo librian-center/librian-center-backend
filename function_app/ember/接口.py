@@ -115,22 +115,43 @@ def 查询基本信息(RowKey):
     return 人
 
 
-def 写文章(文件类型, 标题, 摘要, 内容, 灵牌):
+def 删除事件(PartitionKey, RowKey, 灵牌): 
+    # 表服务.delete_entity(事件表, PartitionKey, RowKey)
+    assert PartitionKey==灵牌['RowKey'], '你没有这个用户的灵牌'
+    表服务.merge_entity(事件表, {
+        'PartitionKey': PartitionKey, 
+        'RowKey': RowKey,
+        '删掉了': True,
+    })
+    return '删除好了'
+    
+
+def 写文章(文件类型, 标题, 摘要, 内容, 灵牌, 键=None):
     from . import 文件存储
-    事件uuid = str(uuid.uuid1())
     md5 = 文件存储.上传(内容.encode('utf8'), 'article')
-    表服务.insert_entity(事件表, {
-        'PartitionKey': 灵牌['RowKey'],
-        'RowKey': 事件uuid,
-        '时间': time.time(),
-
+    信息 = {
         '事件类型': '文章',
-
         '标题': 标题,
         '摘要': 摘要,
         '文件类型': 文件类型,
         '关联文件': md5,
-    })
+    }
+    if 键:
+        pk, rk = 键
+        assert pk==灵牌['RowKey'], '你没有这个用户的灵牌'
+        assert 表服务.get_entity(事件表, pk, rk)
+        信息.update({
+            'PartitionKey': pk,
+            'RowKey': rk,
+        })
+        表服务.merge_entity(事件表, 信息)
+    else:
+        信息.update({
+            'PartitionKey': 灵牌['RowKey'],
+            'RowKey': str(uuid.uuid1()),
+            '时间': time.time(),
+        })
+        表服务.insert_entity(事件表, 信息)
 
 
 def 获得推荐用户(灵牌=None):
@@ -142,9 +163,10 @@ def 获得推荐用户(灵牌=None):
 
 def 查询用户事件(用户rk):
     事件组 = 表服务.goku_query_entities(事件表, filter=f"PartitionKey eq '{用户rk}'",
-                             select='PartitionKey, RowKey, 时间',
+                             select='PartitionKey, RowKey, 时间, 删掉了',
                              )
-    return 事件组
+    有效事件组 = [i for i in 事件组 if not i['删掉了']]
+    return 有效事件组
 
 
 def 查询事件详细(PartitionKey, RowKey):
