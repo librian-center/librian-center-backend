@@ -4,6 +4,7 @@ import hashlib
 import types
 import json
 import time
+import random
 
 from azure.cosmosdb.table import TableService, Entity
 from azure.common import AzureMissingResourceHttpError
@@ -20,6 +21,15 @@ class rimoTableService(TableService):
             del t['etag']
         if 'Timestamp' in t:
             del t['Timestamp']
+        return t
+    
+    def goku_query_entities(self, *li, **d):
+        t = list(super().query_entities(*li, **d))
+        for i in t:
+            if 'etag' in i:
+                del i['etag']
+            if 'Timestamp' in i:
+                del i['Timestamp']
         return t
 
 
@@ -123,11 +133,18 @@ def 写文章(文件类型, 标题, 摘要, 内容, 灵牌):
     })
 
 
+def 获得推荐用户(灵牌=None):
+    所有用户 = 表服务.goku_query_entities(用户表, select='RowKey, 小头像')
+    有头像的用户 = [i for i in 所有用户 if i['小头像']]
+    取样 = random.sample(有头像的用户, 3)
+    return 取样
+
+
 def 查询用户事件(用户rk):
-    事件组 = 表服务.query_entities(事件表, filter=f"PartitionKey eq '{用户rk}'",
+    事件组 = 表服务.goku_query_entities(事件表, filter=f"PartitionKey eq '{用户rk}'",
                              select='PartitionKey, RowKey, 时间',
                              )
-    return list(事件组)
+    return 事件组
 
 
 def 查询事件详细(PartitionKey, RowKey):
