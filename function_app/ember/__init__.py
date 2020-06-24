@@ -33,12 +33,20 @@ def response(x, status_code=200):
 
 def 提取参数(req: func.HttpRequest) -> dict:
     参数表 = dict(req.params)
+    
+    # post
     try:
         req_body = req.get_json()
     except ValueError:
-        pass
+        for i, x in req.form.items():
+            参数表[i] = json.loads(x)
     else:
         参数表.update(req_body)
+    
+    # vditor的上传文件接口
+    if req.files:
+        s = req.files['file[]'].stream
+        参数表['流'] = s.read()
     return 参数表
 
 

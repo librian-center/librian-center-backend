@@ -6,34 +6,14 @@ import json
 import time
 import random
 
-from azure.cosmosdb.table import TableService, Entity
 from azure.common import AzureMissingResourceHttpError
 from azure.cosmosdb.table.models import TablePayloadFormat
 
 from . import config
-from .utils import 莉沫Error
+from .utils import 莉沫Error, 莉沫TableService
 
 
-class rimoTableService(TableService):
-    def get_entity(self, *li, **d):
-        t = super().get_entity(*li, **d)
-        if 'etag' in t:
-            del t['etag']
-        if 'Timestamp' in t:
-            del t['Timestamp']
-        return t
-    
-    def goku_query_entities(self, *li, **d):
-        t = list(super().query_entities(*li, **d))
-        for i in t:
-            if 'etag' in i:
-                del i['etag']
-            if 'Timestamp' in i:
-                del i['Timestamp']
-        return t
-
-
-表服务 = rimoTableService(connection_string=config.STORAGE_CONNECTION_STRING)
+表服务 = 莉沫TableService(connection_string=config.STORAGE_CONNECTION_STRING)
 用户表 = 'user'
 事件表 = 'act'
 
@@ -85,12 +65,20 @@ def 注册(RowKey, 密码, 邮箱):
     return _生成灵牌(RowKey)
 
 
+def 上传图片(流, 灵牌):
+    from . import 图像处理
+    from . import 文件存储
+    新图 = 图像处理.编码为webp(图像处理.解码(流))
+    md5 = 文件存储.上传(灵牌['RowKey'], 新图, 'image')
+    return md5
+
+
 def 修改头像(流, 灵牌):
     from . import 图像处理
     from . import 文件存储
-    大头像, 小头像 = 图像处理.做头(流)
-    大md5 = 文件存储.上传(大头像, 'avatar')
-    小md5 = 文件存储.上传(小头像, 'avatar')
+    大头像, 小头像 = 图像处理.做头(图像处理.解码(流))
+    大md5 = 文件存储.上传(灵牌['RowKey'], 大头像, 'avatar')
+    小md5 = 文件存储.上传(灵牌['RowKey'], 小头像, 'avatar')
     新信息 = {
         'PartitionKey': 'q',
         'RowKey': 灵牌['RowKey'],
@@ -128,7 +116,7 @@ def 删除事件(PartitionKey, RowKey, 灵牌):
 
 def 写文章(文件类型, 标题, 摘要, 内容, 灵牌, 键=None):
     from . import 文件存储
-    md5 = 文件存储.上传(内容.encode('utf8'), 'article')
+    md5 = 文件存储.上传(灵牌['RowKey'], 内容.encode('utf8'), 'article')
     信息 = {
         '事件类型': '文章',
         '标题': 标题,

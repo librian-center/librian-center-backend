@@ -4,6 +4,16 @@ import cv2
 import numpy as np
 
 
+def 解码(流):
+    if type(流)==str:
+        图 = cv2.imdecode(np.array([ord(i) for i in 流], dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    elif type(流)==bytes:
+        图 = cv2.imdecode(np.array([i for i in 流], dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    else: 
+        raise '流应当为str或bytes格式。'
+    return 图
+
+
 def 编码为webp(图):
     retval, buf = cv2.imencode(".webp",
                                图,
@@ -13,8 +23,7 @@ def 编码为webp(图):
     return buf.tobytes()
 
 
-def 做头(流):
-    原图 = cv2.imdecode(np.array([ord(i) for i in 流], dtype=np.uint8), cv2.IMREAD_COLOR)
+def 做头(原图):
     r, c = 原图.shape[:2]
     if r > c:
         r0 = int((r - c) / 2)
